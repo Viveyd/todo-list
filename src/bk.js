@@ -7,7 +7,6 @@ import ddIconURL from './expand.png';
 import returnIconURL from './return.png';
 import  "date-fns";
 import { compareAsc, endOfToday, format, formatDistance, formatDistanceToNow, formatDistanceToNowStrict, isPast, isToday } from "date-fns";
-import check from 'check-circular-reference';
 
 
 
@@ -17,10 +16,6 @@ const App = (function(){
     const header = document.querySelector('header');
     const main = document.querySelector('main');
     const footer = document.querySelector('footer');
-
-    //Get list of 'Projects' object methods
-    // let methodsProto = AppLogic.Projects.getOwnPropertyNames().filter(prop => typeof prop == 'function');
-    // console.log(Object.keys(AppLogic.Projects));
     //Init variables
     let headerDD; 
     let projectList;  
@@ -55,21 +50,18 @@ const App = (function(){
     }
 
     function initLibrary(){
-        if(localStorage.getItem('toDoList001') != null) loadLocalData();
-        else loadDemoData();
+        if(localStorage.user != null) AppLogic.Projects = getFromLocal();
+        else createDemoLib();
     }
 
-    function loadDemoData(){
+    function createDemoLib(){
         AppLogic.requestCreate('Project', 'Cemo Project 1', 'For application testing', '2021-11-21', '2021-11-24', 'high', 'Tracked') ;   
         AppLogic.requestCreate('Project', 'Demo Project 2', 'For application testing', '2021-11-21', '2021-11-25', 'normal', 'Untracked') ;
         AppLogic.requestCreate('Project', 'Bemo Project 3', 'For application testing', '2021-12-21', '2021-12-30', 'high', 'Tracked') ;   
         AppLogic.requestCreate('Project', 'Aemo Project 4', 'For application testing', '2021-12-21', '2021-12-22', 'normal', 'Untracked')    
-        // AppLogic.requestCreate('Task', 'Demo Task 1', 'For application testing', '2021-11-21', '2021-11-22', 'high', AppLogic.Projects.list[0], 'Finished');
-        // AppLogic.requestCreate('Task', 'Demo Task 2', 'For application testing', '2021-11-22', '2021-11-23', 'normal', AppLogic.Projects.list[0], 'Pending');
-        // AppLogic.requestCreate('Task', 'Demo Task 3', 'For application testing', '2021-11-22', '2021-11-23', 'normal', AppLogic.Projects.list[0], 'Pending');
-        AppLogic.requestCreate('Task', 'Demo Task 1', 'For application testing', '2021-11-21', '2021-11-22', 'high', 0, 'Finished');
-        AppLogic.requestCreate('Task', 'Demo Task 2', 'For application testing', '2021-11-22', '2021-11-23', 'normal', 0, 'Pending');
-        AppLogic.requestCreate('Task', 'Demo Task 3', 'For application testing', '2021-11-22', '2021-11-23', 'normal', 0, 'Pending');
+        AppLogic.requestCreate('Task', 'Demo Task 1', 'For application testing', '2021-11-21', '2021-11-22', 'high', AppLogic.Projects.list[0], 'Finished');
+        AppLogic.requestCreate('Task', 'Demo Task 2', 'For application testing', '2021-11-22', '2021-11-23', 'normal', AppLogic.Projects.list[0], 'Pending');
+        AppLogic.requestCreate('Task', 'Demo Task 3', 'For application testing', '2021-11-22', '2021-11-23', 'normal', AppLogic.Projects.list[0], 'Pending');
     }
 
     function initHeader(){
@@ -87,41 +79,17 @@ const App = (function(){
             else headerStyle();
         }
 
-        function replacer(key, value){
-            return (typeof value == 'function') ? value + '': value;
-        }
-
-        function reviver(key, value){
-            if(key == 'update2'){
-                value = function(targetProp, newVal){
-                    this[targetProp] = newVal;
-                }
-            }
-            return value;
-        }
-
         function saveToLocal(){
-            localStorage.setItem('toDoList001', JSON.stringify(AppLogic.Projects, replacer));
-            // console.log(localStorage.getItem('toDoList001'))
-            console.log(`Local saving successful.`);
+            console.log(JSON.stringify(AppLogic.Projects.list));
+            // localStorage.setItem('user', JSON.stringify(AppLogic.Projects));
+
+        
         }
 
-        function loadLocalData(){
-            let a = JSON.parse(localStorage.getItem('toDoList001'), reviver).list;
-            a.forEach(project => {
-                AppLogic.requestCreate('Project', project.title, project.description, project.startDate, project.dueDate, project.priority, project.status);
-                project.tasks.forEach(task => {
-                    AppLogic.requestCreate('Task', task.title, task.description, task.startDate, task.dueDate, task.priority, a.indexOf(project), task.status);
-                });
-            });
-     
-            // AppLogic.Projects = JSON.parse(localStorage.getItem('toDoList001'), reviver);
-            // console.log(AppLogic.Projects);
-            // console.log(`Local save loading successful.`);
-            AppLogic.listProjects();
-            
+        function getFromLocal(){
+            let localData = JSON.parse(localStorage.getItem('user'));
+            return localData
         }
-
 
         function defaultHeader(){
             let logoCon = document.createElement('div');
@@ -320,8 +288,7 @@ const App = (function(){
                     deleteObj(selectedProject);
                     loadMain(projectList);
                     loadHeader(defaultHeader);
-                    header.classList.remove('grid-2-col');
-                    saveToLocal()                                                      
+                    header.classList.remove('grid-2-col');                                                      
                 })
 
                 let editBtn = document.createElement('button');
@@ -620,7 +587,6 @@ const App = (function(){
             taskEl.parentElement.removeChild(taskEl);
             deleteObj(taskObj);
             loadProgBar(selectedProject);
-            saveToLocal();
         }
 
         function deleteObj(taskObj){
@@ -714,7 +680,6 @@ const App = (function(){
                     }
                     
                     inputFields.forEach(field => field.style.display = 'block');
-                    saveToLocal();
                 }
 
         }
@@ -724,7 +689,7 @@ const App = (function(){
             // loadProgBar(taskPreview.parentElement.parentElement.children.length);
             let selectedTask = e.target.parentElement.parentElement;
             let index = [... main.querySelector('#view-proj-tasksUL').children].indexOf(selectedTask);
-            let newValue = (selectedProject.tasks[index].status == 'Finished') ? 'Pending': 'Finished';
+            let newValue = (selectedProject.list[index].status == 'Finished') ? 'Pending': 'Finished';
 
             let taskPreview = this.parentElement.previousElementSibling;
             taskPreview.classList.toggle('marked-task');
@@ -735,8 +700,7 @@ const App = (function(){
             }
             else e.target.previousElementSibling.lastElementChild.textContent = newValue;
                 
-            AppLogic.requestUpdateV2(selectedProject.tasks[index], 'status', newValue);
-            saveToLocal();
+            AppLogic.requestUpdateV2(selectedProject.list[index], 'status', newValue);
             loadProgBar(selectedProject);
 
         }
@@ -776,7 +740,7 @@ const App = (function(){
 
             pbarUpdate = function(proj){
                 let points = [... bar.children];
-                let pointsToMark = proj.tasks.filter(task => task.status == 'Finished').length;
+                let pointsToMark = proj.list.filter(task => task.status == 'Finished').length;
                 // let pointsToMark = [... document.getElementById('view-proj-tasksUL').children].filter(task => task.firstElementChild.classList.contains('marked-task')).length;
                 // console.log(pointsToMark);
 
@@ -810,10 +774,7 @@ const App = (function(){
         
        
         function moveTaskObj(direction, taskObj){
-            // let containingArr = taskObj.project.list;
-            let containingArr= AppLogic.Projects.list[taskObj.projectIndex].task
-
-
+            let containingArr = taskObj.parentObj.list;
             let index = containingArr.indexOf(taskObj);
             let destIndex;
             //If task is already first item in the array, moving up means becoming last item. 
@@ -827,7 +788,6 @@ const App = (function(){
             let switcherooTarget = containingArr[destIndex];
             containingArr[destIndex] = taskObj;
             containingArr[index] = switcherooTarget;
-            saveToLocal();
         }
         
 
@@ -1125,7 +1085,7 @@ const App = (function(){
                 hiddenLi.classList.add('hidden');
                 loadHeader(customHeader1, title.textContent);
                 loadMain(projectView)
-                if(project)customizeProjectView(project.description, project.startDate, project.dueDate, project.priority, project.status, project.tasks);
+                if(project)customizeProjectView(project.description, project.startDate, project.dueDate, project.priority, project.status, project.list);
                 loadProgBar(project);
                 
             });
@@ -1301,14 +1261,11 @@ const App = (function(){
             submitBtn.textContent = 'Create';
             //creates an object(Project/Task) based on user input as values and the header title to indicate what object is to be created
             submitBtn.addEventListener('click', (e)=>{
-                
                 e.preventDefault();
                 let headerTitle = document.querySelector('#header-project-title').textContent;
                 if([titleInput.value, descInput.value, sDateInput.value, dDateInput.value, prioInput.value, statusInput.value].some(value => !value)) alert('Invalid Input');
                 else if(headerTitle == 'New Project') AppLogic.requestCreate('Project', titleInput.value, descInput.value, sDateInput.value, dDateInput.value, prioInput.value, statusInput.value);
-                else if (headerTitle == 'New Task') AppLogic.requestCreate('Task', titleInput.value, descInput.value, sDateInput.value, dDateInput.value, prioInput.value, AppLogic.Projects.list.indexOf(selectedProject), statusInput.value);
-                
-                saveToLocal();
+                else if (headerTitle == 'New Task') AppLogic.requestCreate('Task', titleInput.value, descInput.value, sDateInput.value, dDateInput.value, prioInput.value, selectedProject, statusInput.value);
                 //After the new project/task object is added, reload what is being shown on project list
                 loadHeader(defaultHeader);
                 loadMain(projectList);
